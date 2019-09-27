@@ -449,7 +449,6 @@ resource "azurerm_linux_virtual_machine_scale_set" "test" {
     type         = "SystemAssigned, UserAssigned"
     identity_ids = [
       azurerm_user_assigned_identity.test.id,
-      azurerm_user_assigned_identity.other.id,
     ]
   }
 }
