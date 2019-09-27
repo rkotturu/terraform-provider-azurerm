@@ -132,6 +132,8 @@ func (a azureCliTokenAuth) validate() error {
 }
 
 func obtainAuthorizationToken(endpoint string, subscriptionId string) (*cli.Token, error) {
+
+	azCmdJsonUnmarshal"account", "get-access-token", "--resource", endpoint, "--subscription", subscriptionId, "-o=json"
 	var stderr bytes.Buffer
 	var stdout bytes.Buffer
 
@@ -162,4 +164,33 @@ func obtainAuthorizationToken(endpoint string, subscriptionId string) (*cli.Toke
 	}
 
 	return token, nil
+}
+
+func azCmdJsonUnmarshal(endpoint string, arg ...string) (*cli.Token, error) {
+	cmd := exec.Command("az", arg)
+
+	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
+
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("Error launching Azure CLI: %+v", err)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return nil, fmt.Errorf("Error waiting for the Azure CLI: %+v", err)
+	}
+
+	stdOutStr := stdout.String()
+	stdErrStr := stderr.String()
+
+	if stdErrStr != "" {
+		return nil, fmt.Errorf("Error retrieving running Azure CLI: %s", strings.TrimSpace(stdErrStr))
+	}
+
+	err := json.Unmarshal([]byte(stdOutStr), &token)
+	if err != nil {
+		return nil, fmt.Errorf("Error unmarshaling the result of Azure CLI: %s", err)
+	}
+
+
 }
