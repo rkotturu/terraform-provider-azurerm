@@ -1169,24 +1169,40 @@ func VirtualMachineScaleSetAutomatedOSUpgradePolicySchema() *schema.Schema {
 					Required: true,
 					ForceNew: true,
 				},
+
+				// whilst this isn't present in the nested object it's required when this is specified
+				"health_probe_id": {
+					Type:         schema.TypeString,
+					Required:     true,
+					ForceNew:     true,
+					ValidateFunc: azure.ValidateResourceID,
+				},
 			},
 		},
 	}
 }
 
-func ExpandVirtualMachineScaleSetAutomaticUpgradePolicy(input []interface{}) *compute.AutomaticOSUpgradePolicy {
+type VirtualMachineScaleSetAutomaticUpgradePolicy struct {
+	HealthProbeID string
+	UpgradePolicy compute.AutomaticOSUpgradePolicy
+}
+
+func ExpandVirtualMachineScaleSetAutomaticUpgradePolicy(input []interface{}) *VirtualMachineScaleSetAutomaticUpgradePolicy {
 	if len(input) == 0 {
 		return nil
 	}
 
 	raw := input[0].(map[string]interface{})
-	return &compute.AutomaticOSUpgradePolicy{
-		DisableAutomaticRollback: utils.Bool(raw["disable_automatic_rollback"].(bool)),
-		EnableAutomaticOSUpgrade: utils.Bool(raw["enable_automatic_os_upgrade"].(bool)),
+	return &VirtualMachineScaleSetAutomaticUpgradePolicy{
+		HealthProbeID: raw["health_probe_id"].(string),
+		UpgradePolicy: compute.AutomaticOSUpgradePolicy{
+			DisableAutomaticRollback: utils.Bool(raw["disable_automatic_rollback"].(bool)),
+			EnableAutomaticOSUpgrade: utils.Bool(raw["enable_automatic_os_upgrade"].(bool)),
+		},
 	}
 }
 
-func FlattenVirtualMachineScaleSetAutomaticOSUpgradePolicy(input *compute.AutomaticOSUpgradePolicy) []interface{} {
+func FlattenVirtualMachineScaleSetAutomaticOSUpgradePolicy(input *compute.AutomaticOSUpgradePolicy, healthProbeId *string) []interface{} {
 	if input == nil {
 		return []interface{}{}
 	}
@@ -1201,10 +1217,16 @@ func FlattenVirtualMachineScaleSetAutomaticOSUpgradePolicy(input *compute.Automa
 		enableAutomaticOSUpgrade = *input.EnableAutomaticOSUpgrade
 	}
 
+	healthProbe := ""
+	if healthProbeId != nil {
+		healthProbe = *healthProbeId
+	}
+
 	return []interface{}{
 		map[string]interface{}{
 			"disable_automatic_rollback":  disableAutomaticRollback,
 			"enable_automatic_os_upgrade": enableAutomaticOSUpgrade,
+			"health_probe_id":             healthProbe,
 		},
 	}
 }

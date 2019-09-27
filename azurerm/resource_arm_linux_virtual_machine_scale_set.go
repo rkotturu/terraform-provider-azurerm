@@ -349,8 +349,13 @@ func resourceArmLinuxVirtualMachineScaleSetCreate(d *schema.ResourceData, meta i
 	}
 	priority := compute.VirtualMachinePriorityTypes(d.Get("priority").(string))
 	upgradePolicy := compute.UpgradePolicy{
-		AutomaticOSUpgradePolicy: automaticOSUpgradePolicy,
-		Mode:                     upgradeMode,
+		Mode: upgradeMode,
+	}
+	if automaticOSUpgradePolicy != nil {
+		upgradePolicy.AutomaticOSUpgradePolicy = &automaticOSUpgradePolicy.UpgradePolicy
+		networkProfile.HealthProbe = &compute.APIEntityReference{
+			ID: utils.String(rollingUpgradePolicy.HealthProbeID),
+		}
 	}
 	if rollingUpgradePolicy != nil {
 		upgradePolicy.RollingUpgradePolicy = &rollingUpgradePolicy.UpgradePolicy
@@ -874,7 +879,7 @@ func resourceArmLinuxVirtualMachineScaleSetRead(d *schema.ResourceData, meta int
 	if policy := props.UpgradePolicy; policy != nil {
 		d.Set("upgrade_mode", string(policy.Mode))
 
-		flattenedAutomatic := computeSvc.FlattenVirtualMachineScaleSetAutomaticOSUpgradePolicy(policy.AutomaticOSUpgradePolicy)
+		flattenedAutomatic := computeSvc.FlattenVirtualMachineScaleSetAutomaticOSUpgradePolicy(policy.AutomaticOSUpgradePolicy, healthProbeId)
 		if err := d.Set("automatic_os_upgrade_policy", flattenedAutomatic); err != nil {
 			return fmt.Errorf("Error setting `automatic_os_upgrade_policy`: %+v", err)
 		}
