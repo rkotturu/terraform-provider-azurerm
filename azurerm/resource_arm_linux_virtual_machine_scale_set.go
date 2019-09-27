@@ -125,6 +125,8 @@ func resourceArmLinuxVirtualMachineScaleSet() *schema.Resource {
 				}, false),
 			},
 
+			"identity": computeSvc.VirtualMachineScaleSetIdentitySchema(),
+
 			"max_bid_price": {
 				Type:     schema.TypeFloat,
 				Optional: true,
@@ -279,6 +281,12 @@ func resourceArmLinuxVirtualMachineScaleSetCreate(d *schema.ResourceData, meta i
 	dataDisksRaw := d.Get("data_disk").([]interface{})
 	dataDisks := computeSvc.ExpandVirtualMachineScaleSetDataDisk(dataDisksRaw)
 
+	identityRaw := d.Get("identity").([]interface{})
+	identity, err := computeSvc.ExpandVirtualMachineScaleSetIdentity(identityRaw)
+	if err != nil {
+		return fmt.Errorf("Error expanding `identity`: %+v", err)
+	}
+
 	networkInterfacesRaw := d.Get("network_interface").([]interface{})
 	networkInterfaces, err := computeSvc.ExpandVirtualMachineScaleSetNetworkInterface(networkInterfacesRaw)
 	if err != nil {
@@ -402,7 +410,7 @@ func resourceArmLinuxVirtualMachineScaleSetCreate(d *schema.ResourceData, meta i
 	}
 
 	props := compute.VirtualMachineScaleSet{
-		// TODO: Identity, Plan
+		// TODO: Plan
 		Location: utils.String(location),
 		Sku: &compute.Sku{
 			Name:     utils.String(d.Get("sku").(string)),
@@ -411,7 +419,8 @@ func resourceArmLinuxVirtualMachineScaleSetCreate(d *schema.ResourceData, meta i
 			// doesn't appear this can be set to anything else, even Promo machines are Standard
 			Tier: utils.String("Standard"),
 		},
-		Tags: tags.Expand(t),
+		Identity: identity,
+		Tags:     tags.Expand(t),
 		VirtualMachineScaleSetProperties: &compute.VirtualMachineScaleSetProperties{
 			AdditionalCapabilities:                 additionalCapabilities,
 			DoNotRunExtensionsOnOverprovisionedVMs: utils.Bool(d.Get("do_not_run_extensions_on_overprovisioned_machines").(bool)),
@@ -496,6 +505,8 @@ func resourceArmLinuxVirtualMachineScaleSetUpdate(d *schema.ResourceData, meta i
 	}
 
 	if d.HasChange("single_placement_group") {
+		// TODO: confirm if this is needed
+		// updateConfig = true
 		// TODO: do we need to call `ConvertToSinglePlacementGroup` here too?
 		updateProps.SinglePlacementGroup = utils.Bool(d.Get("single_placement_group").(bool))
 	}
@@ -594,6 +605,18 @@ func resourceArmLinuxVirtualMachineScaleSetUpdate(d *schema.ResourceData, meta i
 
 		bootDiagnosticsRaw := d.Get("boot_diagnostics").([]interface{})
 		updateProps.VirtualMachineProfile.DiagnosticsProfile = computeSvc.ExpandVirtualMachineScaleSetBootDiagnostics(bootDiagnosticsRaw)
+	}
+
+	if d.HasChange("identity") {
+		updateConfig = true
+
+		identityRaw := d.Get("identity").([]interface{})
+		identity, err := computeSvc.ExpandVirtualMachineScaleSetIdentity(identityRaw)
+		if err != nil {
+			return fmt.Errorf("Error expanding `identity`: %+v", err)
+		}
+
+		update.Identity = *identity
 	}
 
 	if d.HasChange("sku") || d.HasChange("instances") {
@@ -737,6 +760,10 @@ func resourceArmLinuxVirtualMachineScaleSetRead(d *schema.ResourceData, meta int
 	d.Set("instances", instances)
 	d.Set("sku", skuName)
 
+	if err := d.Set("identity", computeSvc.FlattenVirtualMachineScaleSetIdentity(resp.Identity)); err != nil {
+		return fmt.Errorf("Error setting `identity`: %+v", err)
+	}
+
 	if resp.VirtualMachineScaleSetProperties == nil {
 		return fmt.Errorf("Error retrieving Linux Virtual Machine Scale Set %q (Resource Group %q): `properties` was nil", name, resourceGroup)
 	}
@@ -748,9 +775,11 @@ func resourceArmLinuxVirtualMachineScaleSetRead(d *schema.ResourceData, meta int
 
 	d.Set("do_not_run_extensions_on_overprovisioned_machines", props.DoNotRunExtensionsOnOverprovisionedVMs)
 	d.Set("overprovision", props.Overprovision)
-	if group := props.ProximityPlacementGroup; group != nil {
-		d.Set("proximity_placement_group_id", group.ID)
+	proximityPlacementGroupId := ""
+	if props.ProximityPlacementGroup != nil && props.ProximityPlacementGroup.ID != nil {
+		proximityPlacementGroupId = *props.ProximityPlacementGroup.ID
 	}
+	d.Set("proximity_placement_group_id", proximityPlacementGroupId)
 	d.Set("single_placement_group", props.SinglePlacementGroup)
 	d.Set("unique_id", props.UniqueID)
 	d.Set("zone_balance", props.ZoneBalance)

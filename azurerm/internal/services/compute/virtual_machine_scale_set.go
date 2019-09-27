@@ -143,6 +143,97 @@ func FlattenVirtualMachineScaleSetBootDiagnostics(input *compute.DiagnosticsProf
 	}
 }
 
+func VirtualMachineScaleSetIdentitySchema() *schema.Schema {
+	return &schema.Schema{
+		Type:     schema.TypeList,
+		Optional: true,
+		MaxItems: 1,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"type": {
+					Type:     schema.TypeString,
+					Required: true,
+					ValidateFunc: validation.StringInSlice([]string{
+						string(compute.ResourceIdentityTypeSystemAssigned),
+						string(compute.ResourceIdentityTypeUserAssigned),
+						string(compute.ResourceIdentityTypeSystemAssignedUserAssigned),
+					}, false),
+				},
+
+				"identity_ids": {
+					Type:     schema.TypeList,
+					Optional: true,
+					Elem: &schema.Schema{
+						Type: schema.TypeString,
+					},
+				},
+
+				"principal_id": {
+					Type:     schema.TypeString,
+					Computed: true,
+				},
+			},
+		},
+	}
+}
+
+func ExpandVirtualMachineScaleSetIdentity(input []interface{}) (*compute.VirtualMachineScaleSetIdentity, error) {
+	if len(input) == 0 {
+		// TODO: Does this want to be this, or nil?
+		return &compute.VirtualMachineScaleSetIdentity{
+			Type: compute.ResourceIdentityTypeNone,
+		}, nil
+	}
+
+	raw := input[0].(map[string]interface{})
+
+	identity := compute.VirtualMachineScaleSetIdentity{
+		Type: compute.ResourceIdentityType(raw["type"].(string)),
+	}
+
+	identityIdsRaw := raw["identity_ids"].([]interface{})
+	identityIds := make(map[string]*compute.VirtualMachineScaleSetIdentityUserAssignedIdentitiesValue)
+	for _, v := range identityIdsRaw {
+		identityIds[v.(string)] = &compute.VirtualMachineScaleSetIdentityUserAssignedIdentitiesValue{}
+	}
+
+	if len(identityIds) > 0 {
+		if identity.Type != compute.ResourceIdentityTypeUserAssigned && identity.Type != compute.ResourceIdentityTypeSystemAssignedUserAssigned {
+			return nil, fmt.Errorf("`identity_ids` can only be specified when `type` includes `UserAssigned`")
+		}
+
+		identity.UserAssignedIdentities = identityIds
+	}
+
+	return &identity, nil
+}
+
+func FlattenVirtualMachineScaleSetIdentity(input *compute.VirtualMachineScaleSetIdentity) []interface{} {
+	if input == nil || input.Type == compute.ResourceIdentityTypeNone {
+		return []interface{}{}
+	}
+
+	identityIds := make([]string, 0)
+	if input.UserAssignedIdentities != nil {
+		for k := range input.UserAssignedIdentities {
+			identityIds = append(identityIds, k)
+		}
+	}
+
+	principalId := ""
+	if input.PrincipalID != nil {
+		principalId = *input.PrincipalID
+	}
+
+	return []interface{}{
+		map[string]interface{}{
+			"type":         string(input.Type),
+			"identity_ids": identityIds,
+			"principal_id": principalId,
+		},
+	}
+}
+
 func VirtualMachineScaleSetNetworkInterfaceSchema() *schema.Schema {
 	return &schema.Schema{
 		Type:     schema.TypeList,
