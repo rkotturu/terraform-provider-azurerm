@@ -17,16 +17,19 @@ func PlanSchema() *schema.Schema {
 				"name": {
 					Type:     schema.TypeString,
 					Required: true,
+					ForceNew: true,
 				},
 
 				"publisher": {
 					Type:     schema.TypeString,
 					Required: true,
+					ForceNew: true,
 				},
 
 				"product": {
 					Type:     schema.TypeString,
 					Required: true,
+					ForceNew: true,
 				},
 			},
 		},

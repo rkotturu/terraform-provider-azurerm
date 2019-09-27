@@ -171,21 +171,6 @@ func TestAccAzureRMLinuxVirtualMachineScaleSet_imagesPlan(t *testing.T) {
 					"admin_password",
 				},
 			},
-			{
-				Config: testAccAzureRMLinuxVirtualMachineScaleSet_imagesPlanUpdated(ri, location),
-				Check: resource.ComposeTestCheckFunc(
-					testCheckAzureRMLinuxVirtualMachineScaleSetExists(resourceName),
-				),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					// not returned from the API
-					"admin_password",
-				},
-			},
 		},
 	})
 }
@@ -473,66 +458,6 @@ resource "azurerm_linux_virtual_machine_scale_set" "test" {
   }
 
   depends_on = [ "azurerm_marketplace_agreement.test" ]
-}
-`, template, rInt)
-}
-
-func testAccAzureRMLinuxVirtualMachineScaleSet_imagesPlanUpdated(rInt int, location string) string {
-	template := testAccAzureRMLinuxVirtualMachineScaleSet_template(rInt, location)
-	return fmt.Sprintf(`
-%s
-
-resource "azurerm_marketplace_agreement" "test" {
-  publisher = "cloudbees"
-  offer     = "jenkins-operations-center"
-  plan      = "jenkins-operations-center-solo"
-}
-
-resource "azurerm_marketplace_agreement" "other" {
-  publisher = "rancher"
-  offer     = "rancheros"
-  plan      = "os"
-}
-
-resource "azurerm_linux_virtual_machine_scale_set" "test" {
-  name                = "acctestvmss-%d"
-  resource_group_name = azurerm_resource_group.test.name
-  location            = azurerm_resource_group.test.location
-  sku                 = "Standard_F2"
-  instances           = 1
-  admin_username      = "adminuser"
-  admin_password      = "P@ssword1234!"
-  disable_password_authentication = false
-
-  source_image_reference {
-    publisher = "rancher"
-    offer     = "rancheros"
-    sku       = "os"
-    version   = "latest"
-  }
-
-  os_disk {
-    storage_account_type = "Standard_LRS"
-    caching              = "ReadWrite"
-  }
-
-  network_interface {
-    name    = "example"
-    primary = true
-
-    ip_configuration {
-      name      = "internal"
-      primary   = true
-      subnet_id = azurerm_subnet.test.id
-    }
-  }
-
-  plan {
-    name      = "os"
-    product   = "rancheros"
-    publisher = "rancher"
-  }
-  depends_on = [ "azurerm_marketplace_agreement.test", "azurerm_marketplace_agreement.other" ]
 }
 `, template, rInt)
 }
