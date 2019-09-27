@@ -141,6 +141,8 @@ func resourceArmLinuxVirtualMachineScaleSet() *schema.Resource {
 				Default:  false,
 			},
 
+			"plan": computeSvc.PlanSchema(),
+
 			"priority": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -296,6 +298,9 @@ func resourceArmLinuxVirtualMachineScaleSetCreate(d *schema.ResourceData, meta i
 	osDiskRaw := d.Get("os_disk").([]interface{})
 	osDisk := computeSvc.ExpandVirtualMachineScaleSetOSDisk(osDiskRaw, compute.Linux)
 
+	planRaw := d.Get("plan").([]interface{})
+	plan := computeSvc.ExpandPlan(planRaw)
+
 	sourceImageReferenceRaw := d.Get("source_image_reference").([]interface{})
 	sourceImageId := d.Get("source_image_id").(string)
 	sourceImageReference, err := computeSvc.ExpandVirtualMachineScaleSetSourceImageReference(sourceImageReferenceRaw, sourceImageId)
@@ -410,7 +415,6 @@ func resourceArmLinuxVirtualMachineScaleSetCreate(d *schema.ResourceData, meta i
 	}
 
 	props := compute.VirtualMachineScaleSet{
-		// TODO: Plan
 		Location: utils.String(location),
 		Sku: &compute.Sku{
 			Name:     utils.String(d.Get("sku").(string)),
@@ -420,6 +424,7 @@ func resourceArmLinuxVirtualMachineScaleSetCreate(d *schema.ResourceData, meta i
 			Tier: utils.String("Standard"),
 		},
 		Identity: identity,
+		Plan:     plan,
 		Tags:     tags.Expand(t),
 		VirtualMachineScaleSetProperties: &compute.VirtualMachineScaleSetProperties{
 			AdditionalCapabilities:                 additionalCapabilities,
@@ -616,7 +621,14 @@ func resourceArmLinuxVirtualMachineScaleSetUpdate(d *schema.ResourceData, meta i
 			return fmt.Errorf("Error expanding `identity`: %+v", err)
 		}
 
-		update.Identity = *identity
+		update.Identity = identity
+	}
+
+	if d.HasChange("plan") {
+		updateConfig = true
+
+		planRaw := d.Get("plan").([]interface{})
+		update.Plan = computeSvc.ExpandPlan(planRaw)
 	}
 
 	if d.HasChange("sku") || d.HasChange("instances") {
@@ -762,6 +774,10 @@ func resourceArmLinuxVirtualMachineScaleSetRead(d *schema.ResourceData, meta int
 
 	if err := d.Set("identity", computeSvc.FlattenVirtualMachineScaleSetIdentity(resp.Identity)); err != nil {
 		return fmt.Errorf("Error setting `identity`: %+v", err)
+	}
+
+	if err := d.Set("plan", computeSvc.FlattenPlan(resp.Plan)); err != nil {
+		return fmt.Errorf("Error setting `plan`: %+v", err)
 	}
 
 	if resp.VirtualMachineScaleSetProperties == nil {
