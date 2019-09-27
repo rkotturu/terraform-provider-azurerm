@@ -453,5 +453,5 @@ resource "azurerm_linux_virtual_machine_scale_set" "test" {
     ]
   }
 }
-`, template, rInt)
+`, template, rInt, rInt)
 }
