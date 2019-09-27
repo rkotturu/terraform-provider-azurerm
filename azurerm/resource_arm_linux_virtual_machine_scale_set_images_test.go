@@ -60,6 +60,12 @@ func testAccAzureRMLinuxVirtualMachineScaleSet_imagesPlan(rInt int, location str
 	return fmt.Sprintf(`
 %s
 
+resource "azurerm_marketplace_agreement" "test" {
+  publisher = "cloudbees"
+  offer     = "jenkins-operations-center"
+  plan      = "jenkins-operations-center-solo"
+}
+
 resource "azurerm_linux_virtual_machine_scale_set" "test" {
   name                = "acctestvmss-%d"
   resource_group_name = azurerm_resource_group.test.name
@@ -98,6 +104,8 @@ resource "azurerm_linux_virtual_machine_scale_set" "test" {
     product   = "jenkins-operations-center"
     publisher = "cloudbees"
   }
+
+  depends_on = [ "azurerm_marketplace_agreement.test" ]
 }
 `, template, rInt)
 }
@@ -106,6 +114,18 @@ func testAccAzureRMLinuxVirtualMachineScaleSet_imagesPlanUpdated(rInt int, locat
 	template := testAccAzureRMLinuxVirtualMachineScaleSet_template(rInt, location)
 	return fmt.Sprintf(`
 %s
+
+resource "azurerm_marketplace_agreement" "test" {
+  publisher = "cloudbees"
+  offer     = "jenkins-operations-center"
+  plan      = "jenkins-operations-center-solo"
+}
+
+resource "azurerm_marketplace_agreement" "other" {
+  publisher = "rancher"
+  offer     = "rancheros"
+  plan      = "os"
+}
 
 resource "azurerm_linux_virtual_machine_scale_set" "test" {
   name                = "acctestvmss-%d"
@@ -145,6 +165,7 @@ resource "azurerm_linux_virtual_machine_scale_set" "test" {
     product   = "rancheros"
     publisher = "rancher"
   }
+  depends_on = [ "azurerm_marketplace_agreement.test", "azurerm_marketplace_agreement.other" ]
 }
 `, template, rInt)
 }
