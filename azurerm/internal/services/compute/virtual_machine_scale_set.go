@@ -1149,7 +1149,6 @@ func FlattenVirtualMachineScaleSetSourceImageReference(input *compute.ImageRefer
 	}
 }
 
-// TODO: a test covering this
 func VirtualMachineScaleSetAutomatedOSUpgradePolicySchema() *schema.Schema {
 	return &schema.Schema{
 		Type:          schema.TypeList,
@@ -1210,7 +1209,6 @@ func FlattenVirtualMachineScaleSetAutomaticOSUpgradePolicy(input *compute.Automa
 	}
 }
 
-// TODO: a test covering this
 func VirtualMachineScaleSetRollingUpgradePolicySchema() *schema.Schema {
 	return &schema.Schema{
 		Type:          schema.TypeList,

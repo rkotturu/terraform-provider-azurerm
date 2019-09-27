@@ -1183,7 +1183,6 @@ func testAccAzureRMLinuxVirtualMachineScaleSet_networkLoadBalancer(rInt int, loc
 	return fmt.Sprintf(`
 %s
 
-
 resource "azurerm_public_ip" "test" {
   name                = "test-ip-%d"
   location            = azurerm_resource_group.test.location
