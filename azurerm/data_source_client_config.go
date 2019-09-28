@@ -78,9 +78,11 @@ func dataSourceArmClientConfigRead(d *schema.ResourceData, meta interface{}) err
 	if principal := servicePrincipal; principal != nil {
 		d.Set("service_principal_application_id", principal.AppID)
 		d.Set("service_principal_object_id", principal.ObjectID)
+		d.Set("authenticated_object_id", principal.ObjectID)
 	} else {
 		d.Set("service_principal_application_id", "")
 		d.Set("service_principal_object_id", "")
+		d.Set("authenticated_object_id", client.authenticatedObjectID)
 	}
 
 	return nil
