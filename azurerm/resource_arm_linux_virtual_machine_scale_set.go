@@ -354,7 +354,7 @@ func resourceArmLinuxVirtualMachineScaleSetCreate(d *schema.ResourceData, meta i
 	if automaticOSUpgradePolicy != nil {
 		upgradePolicy.AutomaticOSUpgradePolicy = &automaticOSUpgradePolicy.UpgradePolicy
 		networkProfile.HealthProbe = &compute.APIEntityReference{
-			ID: utils.String(rollingUpgradePolicy.HealthProbeID),
+			ID: utils.String(automaticOSUpgradePolicy.HealthProbeID),
 		}
 	}
 	if rollingUpgradePolicy != nil {
@@ -498,8 +498,21 @@ func resourceArmLinuxVirtualMachineScaleSetUpdate(d *schema.ResourceData, meta i
 	updateConfig := false
 	updateInstances := false
 
+	// retrieve
+	existing, err := client.Get(ctx, resourceGroup, name)
+	if err != nil {
+		return fmt.Errorf("Error retrieving Linux Virtual Machine Scale Set %q (Resource Group %q): %+v", name, resourceGroup, err)
+	}
+	if existing.VirtualMachineScaleSetProperties == nil {
+		return fmt.Errorf("Error retrieving Linux Virtual Machine Scale Set %q (Resource Group %q): `properties` was nil", name, resourceGroup)
+	}
+
+	// TODO: the automatic/rolling updates are blocked on
+	// https://github.com/Azure/azure-rest-api-specs/pull/7355
+
 	updateProps := compute.VirtualMachineScaleSetUpdateProperties{
 		VirtualMachineProfile: &compute.VirtualMachineScaleSetUpdateVMProfile{},
+		UpgradePolicy:         existing.VirtualMachineScaleSetProperties.UpgradePolicy,
 	}
 	update := compute.VirtualMachineScaleSetUpdate{}
 
@@ -641,11 +654,6 @@ func resourceArmLinuxVirtualMachineScaleSetUpdate(d *schema.ResourceData, meta i
 
 		// in-case ignore_changes is being used, since both fields are required
 		// look up the current values and override them as needed
-		existing, err := client.Get(ctx, resourceGroup, name)
-		if err != nil {
-			return fmt.Errorf("Error retrieving Linux Virtual Machine Scale Set %q (Resource Group %q): %+v", name, resourceGroup, err)
-		}
-
 		sku := existing.Sku
 
 		if d.HasChange("sku") {
