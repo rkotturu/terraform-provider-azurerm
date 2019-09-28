@@ -225,6 +225,18 @@ resource "azurerm_lb_probe" "test" {
   protocol            = "Tcp"
 }
 
+resource "azurerm_lb_rule" "test" {
+  name                           = "AccTestLBRule"
+  resource_group_name            = azurerm_resource_group.test.name
+  loadbalancer_id                = azurerm_lb.test.id
+  probe_id                       = azurerm_lb_probe.test.id
+  backend_address_pool_id        = azurerm_lb_backend_address_pool.test.id
+  frontend_ip_configuration_name = "internal"
+  protocol                       = "Tcp"
+  frontend_port                  = 22
+  backend_port                   = 22
+}
+
 resource "azurerm_linux_virtual_machine_scale_set" "test" {
   name                = "acctestvmss-%d"
   resource_group_name = azurerm_resource_group.test.name
@@ -266,6 +278,8 @@ resource "azurerm_linux_virtual_machine_scale_set" "test" {
 	enable_automatic_os_upgrade = true
 	health_probe_id             = azurerm_lb_probe.test.id
   }
+
+  depends_on = ["azurerm_lb_rule.test"]
 }
 `, template, rInt, rInt, rInt, version)
 }
@@ -360,6 +374,18 @@ resource "azurerm_lb_probe" "test" {
   protocol            = "Tcp"
 }
 
+resource "azurerm_lb_rule" "test" {
+  name                           = "AccTestLBRule"
+  resource_group_name            = azurerm_resource_group.test.name
+  loadbalancer_id                = azurerm_lb.test.id
+  probe_id                       = azurerm_lb_probe.test.id
+  backend_address_pool_id        = azurerm_lb_backend_address_pool.test.id
+  frontend_ip_configuration_name = "internal"
+  protocol                       = "Tcp"
+  frontend_port                  = 22
+  backend_port                   = 22
+}
+
 resource "azurerm_linux_virtual_machine_scale_set" "test" {
   name                = "acctestvmss-%d"
   resource_group_name = azurerm_resource_group.test.name
@@ -403,6 +429,8 @@ resource "azurerm_linux_virtual_machine_scale_set" "test" {
     max_unhealthy_upgraded_instance_percent = 23
     pause_time_between_batches              = "PT30S"
   }
+
+  depends_on = ["azurerm_lb_rule.test"]
 }
 `, template, rInt, rInt, rInt, version)
 }
