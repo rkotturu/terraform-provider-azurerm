@@ -10,9 +10,9 @@ resource "azurerm_virtual_machine" "example" {
   delete_os_disk_on_termination = true
 
   storage_image_reference {
-    publisher = "Canonical"
-    offer     = "UbuntuServer"
-    sku       = "16.04-LTS"
+    publisher = "RedHat"
+    offer     = "RHEL"
+    sku       = "7-RAW"
     version   = "latest"
   }
 
